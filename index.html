@@ -142,6 +142,22 @@ body{
 .mt-progress i{display:block;height:100%;width:0;background:var(--green-d);transition:width .2s}
 .mt-analyze-msg{font-size:13px;font-weight:600;color:#4a5746;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5}
 .mt-ocrtext{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px;max-height:110px;overflow:auto;white-space:pre-wrap;font-weight:600}
+.mt-ai-item{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:9px}
+.mt-ai-item.off{opacity:.45}
+.mt-ai-check{flex-shrink:0;width:30px;height:30px;border-radius:9px;border:1.5px solid var(--green);background:var(--green-d);color:#fff;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mt-ai-item.off .mt-ai-check{background:#fff;border-color:var(--line);color:transparent}
+.mt-ai-mid{flex:1;min-width:0}
+.mt-ai-name{width:100%;border:none;background:transparent;font-family:inherit;font-weight:700;font-size:15px;color:var(--ink);outline:none;padding:1px 0}
+.mt-ai-gramline{display:flex;align-items:center;gap:6px;margin-top:4px}
+.mt-ai-g{width:66px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:5px 7px;font-family:inherit;font-weight:700;font-size:14px;color:var(--ink);text-align:center;outline:none}
+.mt-ai-g:focus{border-color:var(--green)}
+.mt-ai-gu{font-size:12px;font-weight:700;color:var(--muted)}
+.mt-ai-kcal{margin-left:auto;font-family:'Fraunces',serif;font-weight:600;font-size:15px;white-space:nowrap}
+.mt-ai-kcal em{font-style:normal;font-size:11px;color:var(--muted);font-family:'Nunito Sans';font-weight:700}
+.mt-ai-total{display:flex;align-items:center;justify-content:space-between;padding:12px 4px 4px;font-weight:700;font-size:14px}
+.mt-ai-total b{font-family:'Fraunces',serif;font-weight:600;font-size:18px}
+.mt-keyhint{font-size:12px;color:var(--muted);font-weight:600;line-height:1.5;margin-top:6px}
+.mt-keyhint a{color:var(--green-d);font-weight:700}
 </style>
 </head>
 <body>
@@ -152,14 +168,17 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-29.3";
+var APP_VERSION="2026-05-29.4";
 var APP_CHANGES=[
+  "NEU: Teller-Foto erkennen (KI) – ganzen Teller fotografieren, die App erkennt die Lebensmittel und schlägt Mengen & Nährwerte vor",
+  "Dafür einmal pro Gerät einen kostenlosen Google-Gemini-Schlüssel in den Einstellungen hinterlegen (bleibt nur auf dem Gerät)",
+  "Erkannte Posten lassen sich vor dem Buchen einzeln prüfen, anpassen oder abwählen",
   "Nährwert-Felder mit festen Beschriftungen (Eiweiß, Kohlenh., Fett, Portion bleiben sichtbar)",
-  "Als App installierbar – auch auf Android/Samsung (Manifest, App-Icons, Service Worker)",
-  "Neuer Knopf „Als App installieren“ im Info-Dialog und als Hinweis oben",
-  "Barcode-Scanner auf ZXing umgestellt (zuverlässiger auf iPhone/Safari)",
-  "Automatische Aktualisierung: kein manuelles Neu-Laden mehr nötig"
+  "Als App installierbar – auch auf Android/Samsung (Manifest, App-Icons, Service Worker)"
 ];
+
+// KI-Modell für die Teller-Erkennung (Google Gemini, kostenloses Kontingent)
+var AI_MODEL="gemini-2.0-flash";
 
 // ---------- Daten: Grundliste je 100 g ----------
 var RAW = [
@@ -272,6 +291,7 @@ function openSheet(title,beforeClose){
 function openSearch(meal){
   var s=openSheet(meal),body=s.body,close=s.close;
   body.innerHTML='<div class="mt-search-row"><input class="mt-input" id="sq" placeholder="Lebensmittel suchen …"><button class="mt-btn mt-btn-ghost" id="bOnline">Online</button></div>'+
+    '<button class="mt-btn mt-btn-green mt-btn-full" id="bAI" style="margin-bottom:8px">📸 Ganzen Teller fotografieren (KI)</button>'+
     '<div class="mt-actrow"><button class="mt-btn mt-btn-green" id="bScan">📷 Barcode</button><button class="mt-btn mt-btn-green" id="bOcr">🔤 Tabelle</button></div>'+
     '<button class="mt-btn mt-btn-green mt-btn-full" id="bCustom" style="margin-top:0">＋ Eigenes Produkt anlegen</button>'+
     '<div id="results"></div>';
@@ -286,6 +306,7 @@ function openSearch(meal){
   body.querySelector("#bCustom").addEventListener("click",function(){close();openCustom({name:input.value.trim()},meal);});
   body.querySelector("#bScan").addEventListener("click",function(){close();openScanner(meal);});
   body.querySelector("#bOcr").addEventListener("click",function(){close();openOCR(meal);});
+  body.querySelector("#bAI").addEventListener("click",function(){close();openAIPhoto(meal);});
   body.querySelector("#bOnline").addEventListener("click",function(){
     var q=input.value.trim();if(!q)return;results.innerHTML='<div class="mt-spin">Online-Suche …</div>';
     searchOnline(q).then(function(list){if(!list.length){results.innerHTML='<div class="mt-portion-info">Keine Online-Treffer mit Nährwerten gefunden.</div>';return;}show(list,"Online-Treffer");}).catch(function(){results.innerHTML='<div class="mt-portion-info">Online-Suche nicht erreichbar.</div>';});
@@ -416,11 +437,134 @@ function openOCR(meal){
   });
 }
 
+// ---------- Teller-Foto erkennen (Google Gemini, eigener Schlüssel) ----------
+function aiKey(){return (LS.get("mt_aiKey")||"").trim();}
+function aiAnalyzePlate(dataUrl){
+  var key=aiKey();if(!key)return Promise.reject(new Error("kein-key"));
+  var b64=String(dataUrl).split(",")[1]||"";
+  var prompt="Du bist ein Ernährungsexperte. Analysiere das Foto dieser Mahlzeit / dieses Tellers. "+
+    "Liste jedes klar erkennbare Lebensmittel einzeln und konkret auf (z. B. \"Räucherlachs\", \"Käsebrötchen\", \"gekochtes Ei\"). "+
+    "Schätze für jeden Posten die Portion auf dem Teller in Gramm sowie die typischen Nährwerte JE 100 g: "+
+    "kcal, Eiweiß (g), Kohlenhydrate (g), Fett (g). Fasse gleiche Lebensmittel sinnvoll zusammen. "+
+    "Wenn nichts Essbares zu erkennen ist, gib eine leere Liste zurück.";
+  var body={
+    contents:[{parts:[{text:prompt},{inline_data:{mime_type:"image/jpeg",data:b64}}]}],
+    generationConfig:{
+      temperature:0.2,
+      responseMimeType:"application/json",
+      responseSchema:{
+        type:"OBJECT",
+        properties:{items:{type:"ARRAY",items:{type:"OBJECT",
+          properties:{name:{type:"STRING"},grams:{type:"NUMBER"},kcal100:{type:"NUMBER"},protein100:{type:"NUMBER"},carbs100:{type:"NUMBER"},fat100:{type:"NUMBER"}},
+          required:["name","grams","kcal100","protein100","carbs100","fat100"]}}}
+      }
+    }
+  };
+  var url="https://generativelanguage.googleapis.com/v1beta/models/"+AI_MODEL+":generateContent?key="+encodeURIComponent(key);
+  var ctrl=new AbortController();var t=setTimeout(function(){ctrl.abort();},45000);
+  return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:ctrl.signal})
+    .then(function(r){clearTimeout(t);return r.json().then(function(d){return{ok:r.ok,d:d};});})
+    .then(function(res){
+      var d=res.d||{};
+      if(!res.ok||d.error){var m=(d.error&&d.error.message)?d.error.message:("Fehler "+(d.error&&d.error.code||""));throw new Error(m);}
+      var txt="";try{txt=d.candidates[0].content.parts[0].text;}catch(e){txt="";}
+      var obj={};try{obj=JSON.parse(txt);}catch(e){throw new Error("Antwort konnte nicht gelesen werden.");}
+      var arr=(obj&&obj.items)||[];
+      return arr.map(function(it){return{
+        name:String(it.name||"Lebensmittel").trim(),
+        grams:Math.max(1,Math.round(Number(it.grams)||0)),
+        kcal100:Math.max(0,r1(Number(it.kcal100)||0)),
+        p100:Math.max(0,r1(Number(it.protein100)||0)),
+        c100:Math.max(0,r1(Number(it.carbs100)||0)),
+        f100:Math.max(0,r1(Number(it.fat100)||0))
+      };}).filter(function(it){return it.name&&it.grams>0;});
+    });
+}
+function openAIPhoto(meal){
+  var s=openSheet("Teller-Foto erkennen"),body=s.body,close=s.close;
+  if(!aiKey()){
+    body.innerHTML='<div class="mt-photo-hint">Für die Teller-Erkennung braucht die App einen kostenlosen Google-Gemini-Schlüssel. Er wird <b>nur auf diesem Gerät</b> gespeichert und nicht weitergegeben.</div>'+
+      '<div class="mt-keyhint">So bekommst du ihn (einmalig): unter <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> mit einem Google-Konto anmelden, „API-Schlüssel erstellen“ wählen, kopieren – und hier in den Einstellungen einfügen.</div>'+
+      '<button class="mt-btn mt-btn-green mt-btn-full" id="toSet" style="margin-top:14px;padding:14px">⚙ Zu den Einstellungen</button>';
+    body.querySelector("#toSet").addEventListener("click",function(){close();openSettings();});
+    return;
+  }
+  body.innerHTML='<div class="mt-photo-hint">Fotografiere den ganzen Teller von oben bei gutem Licht. Das Bild wird zur Erkennung an Google Gemini gesendet. Die Vorschläge kannst du danach prüfen und anpassen.</div>'+
+    '<label class="mt-btn mt-btn-green mt-btn-full" style="cursor:pointer">📸 Teller fotografieren / wählen<input type="file" accept="image/*" id="aiFile" hidden></label>'+
+    '<div id="aiProg" style="display:none"><div class="mt-photo-hint" id="aiStatus" style="margin:12px 0 0">Wird vorbereitet …</div><div class="mt-progress"><i id="aiBar" style="width:35%"></i></div></div>';
+  body.querySelector("#aiFile").addEventListener("change",function(){
+    var f=this.files[0];if(!f)return;
+    body.querySelector("#aiProg").style.display="block";
+    var status=body.querySelector("#aiStatus"),bar=body.querySelector("#aiBar");
+    status.textContent="Bild wird vorbereitet …";bar.style.width="30%";
+    downscale(f,1024).then(function(durl){
+      status.textContent="KI erkennt die Lebensmittel … (einen Moment)";bar.style.width="65%";
+      return aiAnalyzePlate(durl);
+    }).then(function(items){
+      bar.style.width="100%";
+      if(!items.length){status.textContent="Es konnte kein Lebensmittel sicher erkannt werden. Versuch ein helleres, gerades Foto – oder leg den Eintrag von Hand an.";return;}
+      close();openAIReview(items,meal);
+    }).catch(function(err){
+      var m=(err&&err.message)||"";
+      if(m==="kein-key")status.textContent="Kein Schlüssel hinterlegt. Bitte in den Einstellungen eintragen.";
+      else if(/API key|API_KEY|invalid|PERMISSION|401|403/i.test(m))status.textContent="Der Gemini-Schlüssel wurde nicht akzeptiert. Bitte in den Einstellungen prüfen.";
+      else status.textContent="Erkennung nicht möglich: "+m;
+    });
+  });
+}
+function openAIReview(items,meal){
+  var s=openSheet("Erkennung prüfen"),body=s.body,close=s.close;
+  var mealSel=meal||defaultMeal();
+  var rows=items.map(function(it){return{name:it.name,grams:it.grams,on:true,base:{kcal:it.kcal100,p:it.p100,c:it.c100,f:it.f100}};});
+  function rowKcal(rw){return compute(rw.base,Number(rw.grams)||0).kcal;}
+  function render(){
+    var totalK=rows.reduce(function(a,rw){return a+(rw.on?rowKcal(rw):0);},0);
+    var list=rows.map(function(rw,i){return '<div class="mt-ai-item'+(rw.on?"":" off")+'" data-i="'+i+'">'+
+      '<button class="mt-ai-check" data-act="toggle">✓</button>'+
+      '<div class="mt-ai-mid">'+
+        '<input class="mt-ai-name" data-act="name" value="'+escAttr(rw.name)+'">'+
+        '<div class="mt-ai-gramline"><input class="mt-ai-g" data-act="g" type="number" inputmode="decimal" value="'+rw.grams+'"><span class="mt-ai-gu">g</span><span class="mt-ai-kcal">'+rowKcal(rw)+'<em> kcal</em></span></div>'+
+      '</div></div>';}).join("");
+    body.innerHTML='<div class="mt-portion-info">KI-Vorschlag – bitte kurz prüfen. Menge oder Name anpassen, Posten abwählen oder ergänzen. Werte sind Schätzungen.</div>'+
+      list+
+      '<div class="mt-ai-total"><span>Ausgewählt zusammen</span><b>'+totalK+' kcal</b></div>'+
+      '<div class="mt-field" style="margin-top:10px"><label>Mahlzeit</label><div class="mt-meal-pick" id="aiMeals">'+MEALS.map(function(m){return '<button class="mt-chip'+(mealSel===m?" on":"")+'" data-m="'+m+'">'+m+'</button>';}).join("")+'</div></div>'+
+      '<button class="mt-btn mt-btn-green mt-btn-full" id="aiAdd" style="padding:14px">Ausgewählte zum Tagebuch hinzufügen</button>';
+    body.querySelector("#aiMeals").addEventListener("click",function(e){var b=e.target.closest("[data-m]");if(!b)return;mealSel=b.getAttribute("data-m");render();});
+    body.querySelector("#aiAdd").addEventListener("click",addAll);
+  }
+  function addAll(){
+    var chosen=rows.filter(function(rw){return rw.on&&(Number(rw.grams)||0)>0;});
+    if(!chosen.length){close();return;}
+    var stamp=Date.now();
+    var add=chosen.map(function(rw,i){var g=Number(rw.grams);var nutr=compute(rw.base,g);return{id:"e"+stamp+"_"+i,name:rw.name.trim()||"Lebensmittel",brand:"",grams:g,meal:mealSel,time:nowTime(),base:{kcal:rw.base.kcal,p:rw.base.p,c:rw.base.c,f:rw.base.f},kcal:nutr.kcal,p:nutr.p,c:nutr.c,f:nutr.f};});
+    entries=entries.concat(add);saveEntries();close();renderApp();
+  }
+  // Eingaben live verarbeiten (ohne Neu-Aufbau, damit der Fokus erhalten bleibt)
+  body.addEventListener("input",function(e){
+    var item=e.target.closest(".mt-ai-item");if(!item)return;var i=Number(item.getAttribute("data-i"));var rw=rows[i];if(!rw)return;
+    var act=e.target.getAttribute("data-act");
+    if(act==="g"){rw.grams=e.target.value;var kc=item.querySelector(".mt-ai-kcal");if(kc)kc.innerHTML=rowKcal(rw)+'<em> kcal</em>';updateTotal();}
+    else if(act==="name"){rw.name=e.target.value;}
+  });
+  body.addEventListener("click",function(e){
+    var btn=e.target.closest('[data-act="toggle"]');if(!btn)return;
+    var item=btn.closest(".mt-ai-item");var i=Number(item.getAttribute("data-i"));var rw=rows[i];if(!rw)return;
+    rw.on=!rw.on;item.classList.toggle("off",!rw.on);updateTotal();
+  });
+  function updateTotal(){var totalK=rows.reduce(function(a,rw){return a+(rw.on?rowKcal(rw):0);},0);var t=body.querySelector(".mt-ai-total b");if(t)t.textContent=totalK+" kcal";}
+  render();
+}
+
 // ---------- Einstellungen ----------
 function openSettings(){
   var s=openSheet("Einstellungen"),body=s.body,close=s.close;
-  body.innerHTML='<div class="mt-field"><label>Tagesziel Kalorien (optional)</label><input class="mt-input" id="gi" type="number" inputmode="decimal" value="'+(goal?goal:"")+'" placeholder="z. B. 2000 – oder leer"></div><div class="mt-portion-info">Ohne Eingabe zeigt die App nur die Summen, ohne Vorgabe.</div><button class="mt-btn mt-btn-green mt-btn-full" id="gs" style="padding:14px">Speichern</button>';
-  body.querySelector("#gs").addEventListener("click",function(){var v=body.querySelector("#gi").value.trim();goal=v===""?null:Number(v);LS.set("mt_goal",goal==null?"":String(goal));close();renderApp();});
+  body.innerHTML='<div class="mt-field"><label>Tagesziel Kalorien (optional)</label><input class="mt-input" id="gi" type="number" inputmode="decimal" value="'+(goal?goal:"")+'" placeholder="z. B. 2000 – oder leer"></div><div class="mt-portion-info">Ohne Eingabe zeigt die App nur die Summen, ohne Vorgabe.</div>'+
+    '<div class="mt-section-lab" style="margin-top:6px">Teller-Foto-Erkennung (KI)</div>'+
+    '<div class="mt-field"><label>Google-Gemini-Schlüssel (optional)</label><input class="mt-input" id="ak" type="password" autocomplete="off" value="'+escAttr(aiKey())+'" placeholder="API-Schlüssel einfügen"></div>'+
+    '<div class="mt-keyhint">Nötig für „📸 Ganzen Teller fotografieren“. Kostenlos erstellen unter <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Der Schlüssel bleibt nur auf diesem Gerät; das Teller-Foto wird zur Erkennung an Google gesendet.</div>'+
+    '<button class="mt-btn mt-btn-green mt-btn-full" id="gs" style="padding:14px;margin-top:14px">Speichern</button>';
+  body.querySelector("#gs").addEventListener("click",function(){var v=body.querySelector("#gi").value.trim();goal=v===""?null:Number(v);LS.set("mt_goal",goal==null?"":String(goal));LS.set("mt_aiKey",body.querySelector("#ak").value.trim());close();renderApp();});
 }
 
 // ---------- Info & App-Stand ----------
