@@ -31,6 +31,13 @@ body{
 .mt-title{font-family:'Fraunces',serif;font-weight:600;font-size:26px;letter-spacing:-.5px;line-height:1}
 .mt-title small{display:block;font-family:'Nunito Sans';font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
 .mt-icon-btn{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.mt-head-actions{display:flex;align-items:center;gap:9px}
+.mt-info-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mt-info-btn:hover{color:var(--green-d);border-color:var(--green)}
+.mt-info-sec{margin:14px 0}
+.mt-info-h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:6px}
+.mt-info-list{margin:0;padding-left:18px;font-size:13px;font-weight:600;color:var(--ink);line-height:1.6}
+.mt-info-txt{font-size:13px;font-weight:600;color:var(--muted);line-height:1.5}
 .mt-datebar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px 10px;margin-bottom:16px}
 .mt-datebar>button{border:none;background:transparent;cursor:pointer;font-size:20px;color:var(--green-d);width:38px;height:38px;border-radius:11px}
 .mt-datebar>button:hover{background:var(--green-soft)}
@@ -136,6 +143,15 @@ body{
 (function(){
 "use strict";
 
+// ---------- App-Stand / Version ----------
+// Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
+var APP_VERSION="2026-05-29.2";
+var APP_CHANGES=[
+  "Barcode-Scanner auf ZXing umgestellt (zuverlässiger auf iPhone/Safari)",
+  "Automatische Aktualisierung: kein manuelles Neu-Laden mehr nötig",
+  "Neuer Info-Dialog (dieses „i“) mit dem aktuellen App-Stand"
+];
+
 // ---------- Daten: Grundliste je 100 g ----------
 var RAW = [
 ["Haferflocken",372,13.5,59,7,40],["Müsli (Basis)",360,9,60,8,50],["Vollkornbrot",220,7,41,1.5,45],["Mischbrot",240,7,47,1.2,45],["Weizenbrötchen",280,9,55,1.5,60],["Apfel",54,0.3,14,0.2,130],["Banane",95,1.1,23,0.2,120],["Orange",47,1,12,0.1,130],["Erdbeeren",32,0.8,7,0.4,150],["Blaubeeren",42,0.7,12,0.3,100],["Ei (Huhn)",155,13,1.1,11,58],["Hähnchenbrust (roh)",105,23,0,1.5,150],["Putenbrust-Aufschnitt",110,22,1,2,30],["Rinderhackfleisch",250,19,0,19,125],["Lachs",208,20,0,13,125],["Thunfisch (in Wasser)",110,25,0,1,100],["Magerquark",67,12,4,0.3,250],["Naturjoghurt 3,5%",65,3.5,4.7,3.5,150],["Skyr",63,11,4,0.2,150],["Milch 1,5%",47,3.4,4.9,1.5,200],["Gouda",356,25,0,28,30],["Frischkäse",250,7,3,24,30],["Butter",741,0.7,0.6,83,10],["Olivenöl",884,0,0,100,10],["Reis (gekocht)",130,2.7,28,0.3,150],["Nudeln (gekocht)",158,5.8,31,0.9,200],["Vollkornnudeln (gekocht)",150,6,28,1.2,200],["Kartoffeln (gekocht)",87,2,20,0.1,200],["Tomate",18,0.9,3.9,0.2,100],["Gurke",12,0.6,2.2,0.1,100],["Karotte",41,0.9,10,0.2,80],["Paprika",31,1,6,0.3,120],["Brokkoli",34,2.8,7,0.4,150],["Avocado",160,2,9,15,100],["Mandeln",579,21,22,50,25],["Walnüsse",654,15,14,65,25],["Linsen (gekocht)",116,9,20,0.4,150],["Kidneybohnen (gekocht)",127,8.7,23,0.5,150],["Tofu (natur)",144,16,2,9,100],["Honig",304,0.3,82,0,20],["Vollmilchschokolade",535,8,59,30,25],["Kaffee (schwarz)",2,0.1,0,0,200],
@@ -197,7 +213,7 @@ function renderApp(){
     return '<div class="mt-meal"><div class="mt-meal-head"><div class="mt-meal-name">'+meal+'</div>'+(mk>0?'<div class="mt-meal-sum">'+mk+' kcal</div>':'')+'</div>'+(list.length?'<div class="mt-card">'+rows+'</div>':'')+'<button class="mt-add" data-act="add" data-meal="'+meal+'">＋ Lebensmittel hinzufügen</button></div>';
   }).join("");
   app.innerHTML='<div class="mt-wrap">'+
-    '<div class="mt-head"><div class="mt-title">Mellis Teller<small>Ernährungstagebuch</small></div><button class="mt-icon-btn" data-act="settings">⚙</button></div>'+
+    '<div class="mt-head"><div class="mt-title">Mellis Teller<small>Ernährungstagebuch</small></div><div class="mt-head-actions"><button class="mt-info-btn" data-act="info" aria-label="Info zum App-Stand">i</button><button class="mt-icon-btn" data-act="settings">⚙</button></div></div>'+
     '<div class="mt-datebar"><button data-act="prev">‹</button><div class="mt-date-center"><div class="mt-date-tap"><span class="mt-cal-ico">📅</span><span class="mt-date-main">'+prettyDate(date)+'</span><input type="date" id="dateInput" class="mt-date-input" value="'+date+'"></div>'+(date===todayKey()?'<span class="mt-date-sub">Heute</span>':'<button class="mt-today-btn" data-act="today">↩ Zu Heute</button>')+'</div><button data-act="next">›</button></div>'+
     '<div class="mt-summary"><div class="mt-kcal-row"><div class="mt-kcal-big">'+totals.kcal+'<em> kcal</em></div><div class="mt-goal-txt">'+(goal?'<b>'+goal+'</b> kcal Ziel<br>'+(over?(totals.kcal-goal)+' darüber':(goal-totals.kcal)+' übrig'):'kein Ziel gesetzt<br><span style="color:var(--green)">über ⚙ einstellbar</span>')+'</div></div>'+(goal>0?'<div class="mt-bar'+(over?' over':'')+'"><i style="width:'+goalPct+'%"></i></div>':'')+'<div class="mt-macros" style="margin-top:'+(goal>0?0:16)+'px"><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--terra)"></span>Eiweiß</div><div class="val">'+r1(totals.p)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--amber)"></span>Kohlenh.</div><div class="val">'+r1(totals.c)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--blue)"></span>Fett</div><div class="val">'+r1(totals.f)+'<em> g</em></div></div></div></div>'+
     meals+
@@ -213,6 +229,7 @@ app.addEventListener("click",function(e){
   else if(act==="next")setDate(shiftDay(date,1));
   else if(act==="today")setDate(todayKey());
   else if(act==="settings")openSettings();
+  else if(act==="info")openInfo();
   else if(act==="add")openSearch(el.getAttribute("data-meal"));
   else if(act==="edit"){var id=el.getAttribute("data-id");var en=entries.find(function(x){return x.id===id;});if(en)openEdit(en);}
 });
@@ -380,8 +397,51 @@ function openSettings(){
   body.querySelector("#gs").addEventListener("click",function(){var v=body.querySelector("#gi").value.trim();goal=v===""?null:Number(v);LS.set("mt_goal",goal==null?"":String(goal));close();renderApp();});
 }
 
+// ---------- Info & App-Stand ----------
+function openInfo(){
+  var s=openSheet("Info & App-Stand"),body=s.body;
+  var changes=APP_CHANGES.map(function(c){return '<li>'+esc(c)+'</li>';}).join("");
+  body.innerHTML=
+    '<div class="mt-portion-info">App-Stand <b>'+esc(APP_VERSION)+'</b><br>Mellis Teller · persönliches Ernährungstagebuch</div>'+
+    '<div class="mt-info-sec"><div class="mt-info-h">Zuletzt geändert</div><ul class="mt-info-list">'+changes+'</ul></div>'+
+    '<div class="mt-info-sec"><div class="mt-info-h">Daten &amp; Aktualisierung</div><div class="mt-info-txt">Deine Einträge liegen nur auf diesem Gerät (localStorage). Die App aktualisiert sich automatisch – ein manuelles Neu-Laden ist nicht nötig.</div></div>'+
+    '<button class="mt-btn mt-btn-ghost mt-btn-full" id="ckupd" style="margin-top:4px">Jetzt auf Updates prüfen</button>'+
+    '<div id="ckmsg" class="mt-analyze-msg" style="display:none"></div>';
+  var msg=body.querySelector("#ckmsg");
+  body.querySelector("#ckupd").addEventListener("click",function(){
+    msg.style.display="block";msg.textContent="Prüfe …";
+    checkForUpdate().then(function(res){
+      if(!res||res.error)msg.textContent="Konnte gerade nicht prüfen (keine Verbindung?).";
+      else if(res.updated)msg.textContent="Neuer Stand gefunden – wird geladen …";
+      else msg.textContent="Du hast den neuesten Stand ("+APP_VERSION+").";
+    });
+  });
+}
+
+// ---------- Automatische Aktualisierung (kein Hard-Reload nötig) ----------
+// Holt die live deployte Seite cache-frei, vergleicht die Version und lädt bei
+// einem neuen Stand genau einmal cache-bustend neu.
+function checkForUpdate(){
+  var path=location.pathname;
+  return fetch(path+"?_uc="+Date.now(),{cache:"no-store"}).then(function(r){return r.text();}).then(function(html){
+    var m=html.match(/APP_VERSION\s*=\s*"([^"]+)"/);
+    var remote=m?m[1]:null;
+    if(remote&&remote!==APP_VERSION){
+      var key="mt_reloadedFor";
+      var done=null;try{done=sessionStorage.getItem(key);}catch(e){}
+      if(done!==remote){
+        try{sessionStorage.setItem(key,remote);}catch(e){}
+        location.replace(path+"?v="+encodeURIComponent(remote));
+        return {updated:true,remote:remote};
+      }
+    }
+    return {updated:false,remote:remote};
+  }).catch(function(){return {error:true};});
+}
+document.addEventListener("visibilitychange",function(){if(!document.hidden)checkForUpdate();});
+
 // ---------- Start ----------
-load();renderApp();
+load();renderApp();checkForUpdate();
 })();
 </script>
 </body>
