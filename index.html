@@ -168,17 +168,17 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-29.4";
+var APP_VERSION="2026-05-29.5";
 var APP_CHANGES=[
+  "Teller-Foto-Erkennung nutzt jetzt das aktuelle Modell Gemini 2.5 Flash (das alte 2.0 Flash wird für neue Konten nicht mehr freigegeben)",
   "NEU: Teller-Foto erkennen (KI) – ganzen Teller fotografieren, die App erkennt die Lebensmittel und schlägt Mengen & Nährwerte vor",
-  "Dafür einmal pro Gerät einen kostenlosen Google-Gemini-Schlüssel in den Einstellungen hinterlegen (bleibt nur auf dem Gerät)",
+  "Dafür einmal pro Gerät einen Google-Gemini-Schlüssel in den Einstellungen hinterlegen (bleibt nur auf dem Gerät)",
   "Erkannte Posten lassen sich vor dem Buchen einzeln prüfen, anpassen oder abwählen",
-  "Nährwert-Felder mit festen Beschriftungen (Eiweiß, Kohlenh., Fett, Portion bleiben sichtbar)",
   "Als App installierbar – auch auf Android/Samsung (Manifest, App-Icons, Service Worker)"
 ];
 
-// KI-Modell für die Teller-Erkennung (Google Gemini, kostenloses Kontingent)
-var AI_MODEL="gemini-2.0-flash";
+// KI-Modell für die Teller-Erkennung (Google Gemini)
+var AI_MODEL="gemini-2.5-flash";
 
 // ---------- Daten: Grundliste je 100 g ----------
 var RAW = [
