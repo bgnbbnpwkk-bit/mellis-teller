@@ -8,8 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mellis Teller">
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxODAnIGhlaWdodD0nMTgwJyB2aWV3Qm94PScwIDAgMTgwIDE4MCc+PHJlY3Qgd2lkdGg9JzE4MCcgaGVpZ2h0PScxODAnIHJ4PSc0MCcgZmlsbD0nIzNFNUU0NScvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzQ2JyBmaWxsPSdub25lJyBzdHJva2U9JyNGNEVFRTInIHN0cm9rZS13aWR0aD0nNycvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzE1JyBmaWxsPScjRjRFRUUyJy8+PHJlY3QgeD0nODYnIHk9JzMwJyB3aWR0aD0nOCcgaGVpZ2h0PSczNCcgcng9JzQnIGZpbGw9JyNGNEVFRTInLz48L3N2Zz4K">
-<link rel="manifest" href='data:application/json,{"name":"Mellis Teller","short_name":"Mellis Teller","display":"standalone","background_color":"%23F4EEE2","theme_color":"%233E5E45","icons":[{"src":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxODAnIGhlaWdodD0nMTgwJyB2aWV3Qm94PScwIDAgMTgwIDE4MCc+PHJlY3Qgd2lkdGg9JzE4MCcgaGVpZ2h0PScxODAnIHJ4PSc0MCcgZmlsbD0nIzNFNUU0NScvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzQ2JyBmaWxsPSdub25lJyBzdHJva2U9JyNGNEVFRTInIHN0cm9rZS13aWR0aD0nNycvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzE1JyBmaWxsPScjRjRFRUUyJy8+PHJlY3QgeD0nODYnIHk9JzMwJyB3aWR0aD0nOCcgaGVpZ2h0PSczNCcgcng9JzQnIGZpbGw9JyNGNEVFRTInLz48L3N2Zz4K","sizes":"180x180","type":"image/svg+xml"}]}'>
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
@@ -118,6 +119,12 @@ body{
 .mt-field{margin-bottom:12px}
 .mt-field label{display:block;font-size:12px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .mt-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mt-g4col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mt-g4lab{font-size:10.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);text-align:center;white-space:nowrap}
+.mt-g4col .mt-input{padding-left:6px;padding-right:6px;text-align:center}
+.mt-install{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.mt-install-go{flex:1;border:none;background:var(--green-d);color:#fff;font-family:inherit;font-weight:800;font-size:14px;padding:12px 14px;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.mt-install-x{border:1px solid var(--line);background:var(--surface);color:var(--muted);width:42px;height:42px;border-radius:14px;font-size:15px;cursor:pointer;flex-shrink:0}
 .mt-meal-pick{display:flex;gap:6px;flex-wrap:wrap}
 .mt-toggle{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:13px;padding:11px 14px;margin:10px 0 16px;cursor:pointer}
 .mt-toggle .sw{width:42px;height:24px;border-radius:14px;background:var(--line);position:relative;transition:.2s;flex-shrink:0}
@@ -145,11 +152,13 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-29.2";
+var APP_VERSION="2026-05-29.3";
 var APP_CHANGES=[
+  "Nährwert-Felder mit festen Beschriftungen (Eiweiß, Kohlenh., Fett, Portion bleiben sichtbar)",
+  "Als App installierbar – auch auf Android/Samsung (Manifest, App-Icons, Service Worker)",
+  "Neuer Knopf „Als App installieren“ im Info-Dialog und als Hinweis oben",
   "Barcode-Scanner auf ZXing umgestellt (zuverlässiger auf iPhone/Safari)",
-  "Automatische Aktualisierung: kein manuelles Neu-Laden mehr nötig",
-  "Neuer Info-Dialog (dieses „i“) mit dem aktuellen App-Stand"
+  "Automatische Aktualisierung: kein manuelles Neu-Laden mehr nötig"
 ];
 
 // ---------- Daten: Grundliste je 100 g ----------
@@ -202,6 +211,14 @@ function setDate(d){date=d;loadEntries();renderApp();}
 
 var app=document.getElementById("app");
 
+// ---------- PWA-Installation ----------
+var installEvt=null;
+function isStandalone(){return (window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true;}
+function installHidden(){try{return sessionStorage.getItem("mt_installHidden")==="1";}catch(_){return false;}}
+function doInstall(){if(!installEvt)return;var ev=installEvt;installEvt=null;ev.prompt();ev.userChoice.then(function(){renderApp();}).catch(function(){});}
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();installEvt=e;renderApp();});
+window.addEventListener("appinstalled",function(){installEvt=null;try{sessionStorage.removeItem("mt_installHidden");}catch(_){}renderApp();});
+
 // ---------- Hauptansicht ----------
 function renderApp(){
   var totals=entries.reduce(function(a,e){return{kcal:a.kcal+e.kcal,p:a.p+e.p,c:a.c+e.c,f:a.f+e.f};},{kcal:0,p:0,c:0,f:0});
@@ -212,8 +229,10 @@ function renderApp(){
     var rows=list.map(function(e){return '<div class="mt-entry" data-act="edit" data-id="'+e.id+'"><div class="e-main"><div class="e-name">'+esc(e.name)+'</div><div class="e-sub">'+e.grams+' g'+(e.brand?' · '+esc(e.brand):'')+' · '+e.time+'</div></div><div class="e-kcal">'+e.kcal+'<em> kcal</em></div></div>';}).join("");
     return '<div class="mt-meal"><div class="mt-meal-head"><div class="mt-meal-name">'+meal+'</div>'+(mk>0?'<div class="mt-meal-sum">'+mk+' kcal</div>':'')+'</div>'+(list.length?'<div class="mt-card">'+rows+'</div>':'')+'<button class="mt-add" data-act="add" data-meal="'+meal+'">＋ Lebensmittel hinzufügen</button></div>';
   }).join("");
+  var installBanner=(installEvt&&!isStandalone()&&!installHidden())?'<div class="mt-install"><button class="mt-install-go" data-act="install">📲 Als App installieren</button><button class="mt-install-x" data-act="installhide" aria-label="Ausblenden">✕</button></div>':'';
   app.innerHTML='<div class="mt-wrap">'+
     '<div class="mt-head"><div class="mt-title">Mellis Teller<small>Ernährungstagebuch</small></div><div class="mt-head-actions"><button class="mt-info-btn" data-act="info" aria-label="Info zum App-Stand">i</button><button class="mt-icon-btn" data-act="settings">⚙</button></div></div>'+
+    installBanner+
     '<div class="mt-datebar"><button data-act="prev">‹</button><div class="mt-date-center"><div class="mt-date-tap"><span class="mt-cal-ico">📅</span><span class="mt-date-main">'+prettyDate(date)+'</span><input type="date" id="dateInput" class="mt-date-input" value="'+date+'"></div>'+(date===todayKey()?'<span class="mt-date-sub">Heute</span>':'<button class="mt-today-btn" data-act="today">↩ Zu Heute</button>')+'</div><button data-act="next">›</button></div>'+
     '<div class="mt-summary"><div class="mt-kcal-row"><div class="mt-kcal-big">'+totals.kcal+'<em> kcal</em></div><div class="mt-goal-txt">'+(goal?'<b>'+goal+'</b> kcal Ziel<br>'+(over?(totals.kcal-goal)+' darüber':(goal-totals.kcal)+' übrig'):'kein Ziel gesetzt<br><span style="color:var(--green)">über ⚙ einstellbar</span>')+'</div></div>'+(goal>0?'<div class="mt-bar'+(over?' over':'')+'"><i style="width:'+goalPct+'%"></i></div>':'')+'<div class="mt-macros" style="margin-top:'+(goal>0?0:16)+'px"><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--terra)"></span>Eiweiß</div><div class="val">'+r1(totals.p)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--amber)"></span>Kohlenh.</div><div class="val">'+r1(totals.c)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--blue)"></span>Fett</div><div class="val">'+r1(totals.f)+'<em> g</em></div></div></div></div>'+
     meals+
@@ -230,6 +249,8 @@ app.addEventListener("click",function(e){
   else if(act==="today")setDate(todayKey());
   else if(act==="settings")openSettings();
   else if(act==="info")openInfo();
+  else if(act==="install")doInstall();
+  else if(act==="installhide"){try{sessionStorage.setItem("mt_installHidden","1");}catch(_){}renderApp();}
   else if(act==="add")openSearch(el.getAttribute("data-meal"));
   else if(act==="edit"){var id=el.getAttribute("data-id");var en=entries.find(function(x){return x.id===id;});if(en)openEdit(en);}
 });
@@ -308,7 +329,12 @@ function openCustom(pre,meal){
     '<div class="mt-field"><label>Name</label><input class="mt-input" id="cName" value="'+escAttr(pre.name||"")+'" placeholder="z. B. Lieblings-Müsli"></div>'+
     '<div class="mt-field"><label>Marke (optional)</label><input class="mt-input" id="cBrand" value="'+escAttr(pre.brand||"")+'"></div>'+
     '<div class="mt-field"><label>Kalorien je 100 g (kcal)</label><input class="mt-input" id="cKcal" type="number" inputmode="decimal" value="'+escAttr(pre.kcal==null?"":pre.kcal)+'"></div>'+
-    '<div class="mt-field"><label>Nährwerte je 100 g (g)</label><div class="mt-grid4"><input class="mt-input" id="cP" type="number" inputmode="decimal" placeholder="Eiweiß" value="'+escAttr(pre.p==null?"":pre.p)+'"><input class="mt-input" id="cC" type="number" inputmode="decimal" placeholder="KH" value="'+escAttr(pre.c==null?"":pre.c)+'"><input class="mt-input" id="cF" type="number" inputmode="decimal" placeholder="Fett" value="'+escAttr(pre.f==null?"":pre.f)+'"><input class="mt-input" id="cS" type="number" inputmode="decimal" placeholder="Portion" value="'+escAttr(pre.serving==null?"":pre.serving)+'"></div></div>'+
+    '<div class="mt-field"><label>Nährwerte je 100 g (g)</label><div class="mt-grid4">'+
+      '<div class="mt-g4col"><span class="mt-g4lab">Eiweiß</span><input class="mt-input" id="cP" type="number" inputmode="decimal" placeholder="g" value="'+escAttr(pre.p==null?"":pre.p)+'"></div>'+
+      '<div class="mt-g4col"><span class="mt-g4lab">Kohlenh.</span><input class="mt-input" id="cC" type="number" inputmode="decimal" placeholder="g" value="'+escAttr(pre.c==null?"":pre.c)+'"></div>'+
+      '<div class="mt-g4col"><span class="mt-g4lab">Fett</span><input class="mt-input" id="cF" type="number" inputmode="decimal" placeholder="g" value="'+escAttr(pre.f==null?"":pre.f)+'"></div>'+
+      '<div class="mt-g4col"><span class="mt-g4lab">Portion</span><input class="mt-input" id="cS" type="number" inputmode="decimal" placeholder="g" value="'+escAttr(pre.serving==null?"":pre.serving)+'"></div>'+
+    '</div></div>'+
     '<button class="mt-btn mt-btn-green mt-btn-full" id="cSave" style="padding:14px">Speichern & Portion wählen</button>';
   body.querySelector("#cSave").addEventListener("click",function(){
     var name=body.querySelector("#cName").value.trim();var kcal=Number(body.querySelector("#cKcal").value);
@@ -405,8 +431,17 @@ function openInfo(){
     '<div class="mt-portion-info">App-Stand <b>'+esc(APP_VERSION)+'</b><br>Mellis Teller · persönliches Ernährungstagebuch</div>'+
     '<div class="mt-info-sec"><div class="mt-info-h">Zuletzt geändert</div><ul class="mt-info-list">'+changes+'</ul></div>'+
     '<div class="mt-info-sec"><div class="mt-info-h">Daten &amp; Aktualisierung</div><div class="mt-info-txt">Deine Einträge liegen nur auf diesem Gerät (localStorage). Die App aktualisiert sich automatisch – ein manuelles Neu-Laden ist nicht nötig.</div></div>'+
+    '<div class="mt-info-sec"><div class="mt-info-h">Als App installieren</div>'+
+      (isStandalone()
+        ?'<div class="mt-info-txt">Läuft bereits als installierte App ✓</div>'
+        :(installEvt
+          ?'<button class="mt-btn mt-btn-green mt-btn-full" id="infoInstall" style="padding:13px">📲 Jetzt installieren</button>'
+          :'<div class="mt-info-txt">Über das Browser-Menü (⋮ bzw. das Teilen-Symbol) „Zum Startbildschirm hinzufügen" bzw. „App installieren" wählen.</div>'))+
+    '</div>'+
     '<button class="mt-btn mt-btn-ghost mt-btn-full" id="ckupd" style="margin-top:4px">Jetzt auf Updates prüfen</button>'+
     '<div id="ckmsg" class="mt-analyze-msg" style="display:none"></div>';
+  var infoInstall=body.querySelector("#infoInstall");
+  if(infoInstall)infoInstall.addEventListener("click",function(){s.close();doInstall();});
   var msg=body.querySelector("#ckmsg");
   body.querySelector("#ckupd").addEventListener("click",function(){
     msg.style.display="block";msg.textContent="Prüfe …";
@@ -439,6 +474,11 @@ function checkForUpdate(){
   }).catch(function(){return {error:true};});
 }
 document.addEventListener("visibilitychange",function(){if(!document.hidden)checkForUpdate();});
+
+// ---------- Service Worker (macht die App auf Android installierbar) ----------
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});
+}
 
 // ---------- Start ----------
 load();renderApp();checkForUpdate();
