@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Mellis Teller">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxODAnIGhlaWdodD0nMTgwJyB2aWV3Qm94PScwIDAgMTgwIDE4MCc+PHJlY3Qgd2lkdGg9JzE4MCcgaGVpZ2h0PScxODAnIHJ4PSc0MCcgZmlsbD0nIzNFNUU0NScvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzQ2JyBmaWxsPSdub25lJyBzdHJva2U9JyNGNEVFRTInIHN0cm9rZS13aWR0aD0nNycvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzE1JyBmaWxsPScjRjRFRUUyJy8+PHJlY3QgeD0nODYnIHk9JzMwJyB3aWR0aD0nOCcgaGVpZ2h0PSczNCcgcng9JzQnIGZpbGw9JyNGNEVFRTInLz48L3N2Zz4K">
 <link rel="manifest" href='data:application/json,{"name":"Mellis Teller","short_name":"Mellis Teller","display":"standalone","background_color":"%23F4EEE2","theme_color":"%233E5E45","icons":[{"src":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxODAnIGhlaWdodD0nMTgwJyB2aWV3Qm94PScwIDAgMTgwIDE4MCc+PHJlY3Qgd2lkdGg9JzE4MCcgaGVpZ2h0PScxODAnIHJ4PSc0MCcgZmlsbD0nIzNFNUU0NScvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzQ2JyBmaWxsPSdub25lJyBzdHJva2U9JyNGNEVFRTInIHN0cm9rZS13aWR0aD0nNycvPjxjaXJjbGUgY3g9JzkwJyBjeT0nOTInIHI9JzE1JyBmaWxsPScjRjRFRUUyJy8+PHJlY3QgeD0nODYnIHk9JzMwJyB3aWR0aD0nOCcgaGVpZ2h0PSczNCcgcng9JzQnIGZpbGw9JyNGNEVFRTInLz48L3N2Zz4K","sizes":"180x180","type":"image/svg+xml"}]}'>
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap');
@@ -306,32 +306,44 @@ function openCustom(pre,meal){
 function mapProduct(p){var nu=p.nutriments||{};var kcal=nu["energy-kcal_100g"];if(kcal==null&&nu["energy_100g"]!=null)kcal=nu["energy_100g"]/4.184;if(kcal==null||isNaN(kcal))return null;return{id:"o"+Math.random().toString(36).slice(2),name:(p.product_name_de||p.product_name||"").trim(),brand:(p.brands||"").split(",")[0].trim(),kcal:r1(kcal),p:r1(nu["proteins_100g"]||0),c:r1(nu["carbohydrates_100g"]||0),f:r1(nu["fat_100g"]||0),serving:Number(p.serving_quantity)||100,online:true};}
 function searchOnline(q){
   var url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&search_simple=1&action=process&json=1&page_size=30&fields=product_name,product_name_de,brands,nutriments,serving_quantity";
-  return fetch(url).then(function(r){return r.json();}).then(function(d){return(d.products||[]).map(mapProduct).filter(function(x){return x&&x.name;}).slice(0,25);});
+  var ctrl=new AbortController();var t=setTimeout(function(){ctrl.abort();},9000);
+  return fetch(url,{signal:ctrl.signal}).then(function(r){clearTimeout(t);return r.json();}).then(function(d){return(d.products||[]).map(mapProduct).filter(function(x){return x&&x.name;}).slice(0,25);});
 }
 function lookupBarcode(code){
   var url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,product_name_de,brands,nutriments,serving_quantity";
   return fetch(url).then(function(r){return r.json();}).then(function(d){if(d.status!==1||!d.product)return null;var f=mapProduct(d.product);if(f&&!f.name)f.name="Produkt "+code;return f;});
 }
 
-// ---------- Barcode-Scanner ----------
+// ---------- Barcode-Scanner (ZXing) ----------
 function openScanner(meal){
-  var h=null,stopped=false;
-  function stop(){if(h&&!stopped){stopped=true;try{h.stop().then(function(){try{h.clear();}catch(e){}});}catch(e){}}}
+  var reader=null,stopped=false;
+  function stop(){if(reader&&!stopped){stopped=true;try{reader.reset();}catch(e){}}}
   var s=openSheet("Barcode scannen",stop),body=s.body,close=s.close;
-  if(typeof Html5Qrcode==="undefined"){body.innerHTML='<div class="mt-analyze-msg">Der Scanner konnte nicht geladen werden (keine Verbindung beim Öffnen?). Bitte Seite neu laden.</div>';return;}
-  body.innerHTML='<div class="mt-photo-hint">Halte den Strichcode in den Rahmen. Bitte Kamera-Zugriff erlauben.</div><div id="reader" class="mt-reader"></div><div id="scanmsg" class="mt-analyze-msg" style="display:none"></div><button class="mt-btn mt-btn-ghost mt-btn-full" id="scanFile" style="margin-top:10px">Stattdessen Foto vom Barcode wählen</button><input type="file" accept="image/*" id="scanFileInput" hidden>';
-  var msg=body.querySelector("#scanmsg");
-  function found(food,code){if(food){close();openCustom(food,meal);}else{msg.style.display="block";msg.textContent="Kein Treffer in der Datenbank für "+code+". Du kannst es per Foto-Tabelle oder von Hand anlegen.";}}
-  function onDecode(text){stop();msg.style.display="block";msg.textContent="Suche Produkt …";lookupBarcode(text).then(function(f){found(f,text);}).catch(function(){msg.textContent="Datenbank nicht erreichbar.";});}
+  if(typeof ZXing==="undefined"){body.innerHTML='<div class="mt-analyze-msg">Der Scanner konnte nicht geladen werden (Verbindung beim Öffnen?). Bitte Seite neu laden.</div>';return;}
+  body.innerHTML='<div class="mt-photo-hint">Halte den Strichcode waagerecht und möglichst formatfüllend in den Rahmen. Bitte Kamera-Zugriff erlauben.</div>'+
+    '<div class="mt-reader"><video id="zxvid" style="width:100%;height:300px;object-fit:cover;display:block" muted playsinline></video></div>'+
+    '<div id="scanmsg" class="mt-analyze-msg" style="display:none"></div>'+
+    '<button class="mt-btn mt-btn-ghost mt-btn-full" id="scanFile" style="margin-top:10px">Stattdessen Foto vom Barcode wählen</button>'+
+    '<input type="file" accept="image/*" id="scanFileInput" hidden>';
+  var msg=body.querySelector("#scanmsg");var video=body.querySelector("#zxvid");
+  var hints=new Map();
+  try{hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128]);hints.set(ZXing.DecodeHintType.TRY_HARDER,true);}catch(e){}
+  function found(food,code){if(food){close();openCustom(food,meal);}else{msg.style.display="block";msg.textContent="Kein Treffer in der Datenbank für "+code+". Du kannst es per „Tabelle\" oder von Hand anlegen.";}}
+  function handleCode(text){stop();msg.style.display="block";msg.textContent="Code "+text+" – suche Produkt …";lookupBarcode(text).then(function(f){found(f,text);}).catch(function(){msg.textContent="Datenbank nicht erreichbar.";});}
   try{
-    h=new Html5Qrcode("reader");
-    var cfg={fps:10,qrbox:{width:260,height:160}};
-    if(window.Html5QrcodeSupportedFormats){cfg.formatsToSupport=[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.CODE_128];}
-    h.start({facingMode:"environment"},cfg,onDecode,function(){}).catch(function(){msg.style.display="block";msg.textContent="Kamera nicht verfügbar. Bitte den Foto-Knopf unten nutzen.";});
-  }catch(e){msg.style.display="block";msg.textContent="Kamera nicht verfügbar.";}
+    reader=new ZXing.BrowserMultiFormatReader(hints);
+    var startPromise;
+    if(reader.decodeFromConstraints){startPromise=reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}}},video,function(result){if(result&&!stopped)handleCode(result.getText());});}
+    else{startPromise=reader.decodeFromVideoDevice(undefined,video,function(result){if(result&&!stopped)handleCode(result.getText());});}
+    if(startPromise&&startPromise.catch)startPromise.catch(function(){msg.style.display="block";msg.textContent="Kamera nicht verfügbar. Bitte den Foto-Knopf unten nutzen.";});
+  }catch(e){msg.style.display="block";msg.textContent="Scanner-Fehler. Bitte den Foto-Knopf nutzen.";}
   var fi=body.querySelector("#scanFileInput");
   body.querySelector("#scanFile").addEventListener("click",function(){fi.click();});
-  fi.addEventListener("change",function(){var f=fi.files[0];if(!f)return;stop();msg.style.display="block";msg.textContent="Barcode wird gelesen …";var hh=new Html5Qrcode("reader");hh.scanFile(f,false).then(function(text){try{hh.clear();}catch(e){}msg.textContent="Suche Produkt …";return lookupBarcode(text).then(function(food){found(food,text);});}).catch(function(){msg.textContent="Konnte keinen Barcode im Foto erkennen.";});});
+  fi.addEventListener("change",function(){
+    var f=fi.files[0];if(!f)return;stop();msg.style.display="block";msg.textContent="Barcode wird gelesen …";
+    var url=URL.createObjectURL(f);var r2=new ZXing.BrowserMultiFormatReader(hints);
+    r2.decodeFromImageUrl(url).then(function(result){URL.revokeObjectURL(url);var text=result.getText();msg.textContent="Code "+text+" – suche Produkt …";return lookupBarcode(text).then(function(food){found(food,text);});}).catch(function(){URL.revokeObjectURL(url);msg.textContent="Konnte keinen Barcode im Foto erkennen. Tipp: nah heran, gerade halten, gute Beleuchtung.";});
+  });
 }
 
 // ---------- OCR der Nährwert-Tabelle ----------
