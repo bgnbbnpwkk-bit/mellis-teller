@@ -166,6 +166,7 @@ body{
 .mt-empty{background:linear-gradient(160deg,#fff,#FFFBF2);border:1.5px dashed var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px;font-size:14px;font-weight:600;color:#5d6b58;line-height:1.5;text-align:center}
 .mt-milestone{display:flex;align-items:center;gap:11px;background:linear-gradient(160deg,#FFF7E6,#FFFBF2);border:1px solid #EAD9A8;border-radius:16px;padding:12px 14px;margin-bottom:16px;font-weight:700;font-size:14px;color:#8a6d1f;line-height:1.4}
 .mt-milestone .mx{margin-left:auto;border:none;background:#fff;width:30px;height:30px;border-radius:9px;font-size:14px;cursor:pointer;color:var(--muted);flex-shrink:0}
+.mt-sign{font-family:'Fraunces',serif;font-style:italic;font-size:13px;font-weight:500;color:var(--green);text-align:center;margin-top:8px;letter-spacing:.01em}
 </style>
 </head>
 <body>
@@ -176,13 +177,13 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-30.1";
+var APP_VERSION="2026-05-30.2";
 var APP_CHANGES=[
+  "Kleine Liebes-Signatur „Team Melli & Marc“ ganz unten",
+  "Ein paar besondere „Team Melli & Marc“-Sätze im Gedanken des Tages",
   "Persönliche Begrüßung mit Namen, je nach Tageszeit",
   "Gedanke des Tages – ein kleiner, liebevoller Satz, der täglich wechselt",
-  "Dranbleiben-Serie zeigt sanft, wie viele Tage du in Folge dabei bist",
-  "Warme Hinweise an leeren Tagen und kleine Glückwünsche bei Meilensteinen",
-  "Alles einzeln an- und abschaltbar unter Einstellungen / Persönliches"
+  "Dranbleiben-Serie und warme Hinweise an leeren Tagen"
 ];
 
 // KI-Modell für die Teller-Erkennung (Google Gemini)
@@ -246,7 +247,10 @@ var THOUGHTS=[
   "Dranbleiben ist wertvoller als perfekt sein.",
   "Danke, dass du auf dich achtest. 🌸",
   "Heute ist ein guter Tag, um gut für dich zu sorgen.",
-  "Ein voller Teller, ein leichtes Herz."
+  "Ein voller Teller, ein leichtes Herz.",
+  "Team Melli & Marc – gemeinsam durch jeden Tag. 💚",
+  "Du bist nicht allein – Team Melli & Marc hält zusammen.",
+  "Was auch kommt: Team Melli & Marc schafft das. 💪💚"
 ];
 function thoughtOfDay(){var d=todayKey().split("-").map(Number);var n=Math.floor(Date.UTC(d[0],d[1]-1,d[2])/86400000);return THOUGHTS[((n%THOUGHTS.length)+THOUGHTS.length)%THOUGHTS.length];}
 function dayHasEntries(k){try{var e=LS.get("mt_log_"+k);if(!e)return false;var a=JSON.parse(e);return!!(a&&a.length);}catch(_){return false;}}
@@ -310,6 +314,7 @@ function renderApp(){
     '<div class="mt-summary"><div class="mt-kcal-row"><div class="mt-kcal-big">'+totals.kcal+'<em> kcal</em></div><div class="mt-goal-txt">'+(goal?'<b>'+goal+'</b> kcal Ziel<br>'+(over?(totals.kcal-goal)+' darüber':(goal-totals.kcal)+' übrig'):'kein Ziel gesetzt<br><span style="color:var(--green)">über ⚙ einstellbar</span>')+'</div></div>'+(goal>0?'<div class="mt-bar'+(over?' over':'')+'"><i style="width:'+goalPct+'%"></i></div>':'')+'<div class="mt-macros" style="margin-top:'+(goal>0?0:16)+'px"><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--terra)"></span>Eiweiß</div><div class="val">'+r1(totals.p)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--amber)"></span>Kohlenh.</div><div class="val">'+r1(totals.c)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--blue)"></span>Fett</div><div class="val">'+r1(totals.f)+'<em> g</em></div></div></div></div>'+
     emptyHtml+meals+
     '<div class="mt-note">Nährwerte sind ca.-Angaben je 100 g. Daten werden auf diesem Gerät gespeichert.</div>'+
+    '<div class="mt-sign">Mit Liebe gemacht · Team Melli &amp; Marc 💚</div>'+
   '</div>';
 }
 
