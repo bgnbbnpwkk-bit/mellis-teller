@@ -158,6 +158,14 @@ body{
 .mt-ai-total b{font-family:'Fraunces',serif;font-weight:600;font-size:18px}
 .mt-keyhint{font-size:12px;color:var(--muted);font-weight:600;line-height:1.5;margin-top:6px}
 .mt-keyhint a{color:var(--green-d);font-weight:700}
+.mt-title small.greet{text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--green-d);font-weight:700;margin-top:7px}
+.mt-thought{display:flex;gap:9px;align-items:flex-start;background:var(--green-soft);border-radius:14px;padding:11px 14px;margin-bottom:14px;font-size:13.5px;font-weight:600;color:#3f5a43;line-height:1.45}
+.mt-thought .ic{flex-shrink:0}
+.mt-thought em{font-style:italic;font-weight:600}
+.mt-streak{display:inline-flex;align-items:center;gap:6px;background:var(--green-soft);color:var(--green-d);font-weight:800;font-size:12.5px;border-radius:11px;padding:6px 12px;margin-bottom:14px}
+.mt-empty{background:linear-gradient(160deg,#fff,#FFFBF2);border:1.5px dashed var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px;font-size:14px;font-weight:600;color:#5d6b58;line-height:1.5;text-align:center}
+.mt-milestone{display:flex;align-items:center;gap:11px;background:linear-gradient(160deg,#FFF7E6,#FFFBF2);border:1px solid #EAD9A8;border-radius:16px;padding:12px 14px;margin-bottom:16px;font-weight:700;font-size:14px;color:#8a6d1f;line-height:1.4}
+.mt-milestone .mx{margin-left:auto;border:none;background:#fff;width:30px;height:30px;border-radius:9px;font-size:14px;cursor:pointer;color:var(--muted);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -168,13 +176,13 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-29.5";
+var APP_VERSION="2026-05-30.1";
 var APP_CHANGES=[
-  "Teller-Foto-Erkennung nutzt jetzt das aktuelle Modell Gemini 2.5 Flash (das alte 2.0 Flash wird für neue Konten nicht mehr freigegeben)",
-  "NEU: Teller-Foto erkennen (KI) – ganzen Teller fotografieren, die App erkennt die Lebensmittel und schlägt Mengen & Nährwerte vor",
-  "Dafür einmal pro Gerät einen Google-Gemini-Schlüssel in den Einstellungen hinterlegen (bleibt nur auf dem Gerät)",
-  "Erkannte Posten lassen sich vor dem Buchen einzeln prüfen, anpassen oder abwählen",
-  "Als App installierbar – auch auf Android/Samsung (Manifest, App-Icons, Service Worker)"
+  "Persönliche Begrüßung mit Namen, je nach Tageszeit",
+  "Gedanke des Tages – ein kleiner, liebevoller Satz, der täglich wechselt",
+  "Dranbleiben-Serie zeigt sanft, wie viele Tage du in Folge dabei bist",
+  "Warme Hinweise an leeren Tagen und kleine Glückwünsche bei Meilensteinen",
+  "Alles einzeln an- und abschaltbar unter Einstellungen / Persönliches"
 ];
 
 // KI-Modell für die Teller-Erkennung (Google Gemini)
@@ -219,6 +227,44 @@ function parseNum(v){if(v==null)return null;var m=String(v).replace(",",".").mat
 function esc(s){return String(s==null?"":s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
 function escAttr(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 
+// ---------- Persönliche Note ----------
+function pfName(){var n=(LS.get("mt_name")||"").trim();return n||"Melli";}
+function pfOn(k){var v=LS.get("mt_pf_"+k);return v===null?true:v==="1";}
+function pfSet(k,b){LS.set("mt_pf_"+k,b?"1":"0");}
+function greeting(){var h=new Date().getHours();var n=esc(pfName());if(h<11)return"Guten Morgen, "+n+" ☀️";if(h<17)return"Schön, dass du da bist, "+n+" 🌿";if(h<22)return"Guten Abend, "+n+" 🌙";return"Gute Nacht, "+n+" 🌙";}
+var THOUGHTS=[
+  "Jeder Eintrag ist ein kleiner Akt der Fürsorge für dich. 💚",
+  "Es geht nicht um perfekt – es geht um dich.",
+  "Schön, dass du dir heute einen Moment nimmst.",
+  "Achtsamkeit schlägt Strenge. 🌿",
+  "Ein Tag nach dem anderen – du machst das gut.",
+  "Dein Körper darf genährt werden, nicht bestraft.",
+  "Kleine Schritte zählen am meisten.",
+  "Sei heute freundlich zu dir. 🤍",
+  "Essen ist auch Freude – genieß es.",
+  "Du bist genau richtig, so wie du bist.",
+  "Dranbleiben ist wertvoller als perfekt sein.",
+  "Danke, dass du auf dich achtest. 🌸",
+  "Heute ist ein guter Tag, um gut für dich zu sorgen.",
+  "Ein voller Teller, ein leichtes Herz."
+];
+function thoughtOfDay(){var d=todayKey().split("-").map(Number);var n=Math.floor(Date.UTC(d[0],d[1]-1,d[2])/86400000);return THOUGHTS[((n%THOUGHTS.length)+THOUGHTS.length)%THOUGHTS.length];}
+function dayHasEntries(k){try{var e=LS.get("mt_log_"+k);if(!e)return false;var a=JSON.parse(e);return!!(a&&a.length);}catch(_){return false;}}
+function calcStreak(){var t=todayKey();var anchor=dayHasEntries(t)?t:(dayHasEntries(shiftDay(t,-1))?shiftDay(t,-1):null);if(!anchor)return 0;var n=0,cur=anchor,guard=0;while(dayHasEntries(cur)&&guard<4000){n++;cur=shiftDay(cur,-1);guard++;}return n;}
+function emptyMsg(){var name=esc(pfName());if(date!==todayKey())return"Für diesen Tag ist noch nichts eingetragen.";var h=new Date().getHours();var meal=h<11?"dein Frühstück":h<15?"dein Mittagessen":h<21?"dein Abendessen":"einen Snack";var ic=h<11?"🍳":h<15?"🥗":h<21?"🍽️":"🌙";return ic+" Noch nichts eingetragen – magst du "+meal+" festhalten, "+name+"?";}
+function logStats(){var entriesN=0,days=0;try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf("mt_log_")===0){var a=JSON.parse(localStorage.getItem(k)||"[]");if(a&&a.length){days++;entriesN+=a.length;}}}}catch(_){}return{entries:entriesN,days:days};}
+function milestoneList(name){return[
+  {id:"d3",ok:function(s){return s.days>=3;},text:"3 Tage protokolliert – schön, dass du dranbleibst, "+name+"! 🌱"},
+  {id:"e10",ok:function(s){return s.entries>=10;},text:"10 Einträge geschafft – toll gemacht, "+name+"! 🎉"},
+  {id:"d7",ok:function(s){return s.days>=7;},text:"Eine ganze Woche dabei 🌼"},
+  {id:"e50",ok:function(s){return s.entries>=50;},text:"50 Einträge – beeindruckend, "+name+"! 💚"},
+  {id:"d30",ok:function(s){return s.days>=30;},text:"Ein ganzer Monat dabei 🌻"},
+  {id:"e100",ok:function(s){return s.entries>=100;},text:"100 Einträge – was für ein Durchhaltevermögen! 🌟"},
+  {id:"d100",ok:function(s){return s.days>=100;},text:"100 Tage achtsam dabei 🏆"}
+];}
+function pendingMilestone(){if(!pfOn("warm"))return null;var s=logStats();var list=milestoneList(esc(pfName()));var achieved=list.filter(function(m){return m.ok(s);});if(!achieved.length)return null;var seen=[];try{seen=JSON.parse(LS.get("mt_seenMs")||"[]");}catch(_){}var unseen=achieved.filter(function(m){return seen.indexOf(m.id)===-1;});if(!unseen.length)return null;return{item:achieved[achieved.length-1],ids:achieved.map(function(m){return m.id;})};}
+function dismissMilestone(ids){var seen=[];try{seen=JSON.parse(LS.get("mt_seenMs")||"[]");}catch(_){}ids.forEach(function(id){if(seen.indexOf(id)===-1)seen.push(id);});LS.set("mt_seenMs",JSON.stringify(seen));}
+
 // ---------- Speicher (localStorage) ----------
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 var date=todayKey(), entries=[], customFoods=[], goal=null;
@@ -249,12 +295,19 @@ function renderApp(){
     return '<div class="mt-meal"><div class="mt-meal-head"><div class="mt-meal-name">'+meal+'</div>'+(mk>0?'<div class="mt-meal-sum">'+mk+' kcal</div>':'')+'</div>'+(list.length?'<div class="mt-card">'+rows+'</div>':'')+'<button class="mt-add" data-act="add" data-meal="'+meal+'">＋ Lebensmittel hinzufügen</button></div>';
   }).join("");
   var installBanner=(installEvt&&!isStandalone()&&!installHidden())?'<div class="mt-install"><button class="mt-install-go" data-act="install">📲 Als App installieren</button><button class="mt-install-x" data-act="installhide" aria-label="Ausblenden">✕</button></div>':'';
+  var subtitle=pfOn("greet")?'<small class="greet">'+greeting()+'</small>':'<small>Ernährungstagebuch</small>';
+  var ms=pendingMilestone();
+  var milestoneBanner=ms?'<div class="mt-milestone"><span>🎉</span><span>'+ms.item.text+'</span><button class="mx" data-act="msdismiss" aria-label="Schließen">✕</button></div>':'';
+  var thoughtHtml=pfOn("thought")?'<div class="mt-thought"><span class="ic">🌿</span><span>'+thoughtOfDay()+'</span></div>':'';
+  var st=calcStreak();
+  var streakHtml=(pfOn("streak")&&st>=1)?'<div class="mt-streak">🌱 '+(st===1?'Heute dabei – schön!':(st+' Tage in Folge dabei'))+'</div>':'';
+  var emptyHtml=(pfOn("warm")&&entries.length===0)?'<div class="mt-empty">'+emptyMsg()+'</div>':'';
   app.innerHTML='<div class="mt-wrap">'+
-    '<div class="mt-head"><div class="mt-title">Mellis Teller<small>Ernährungstagebuch</small></div><div class="mt-head-actions"><button class="mt-info-btn" data-act="info" aria-label="Info zum App-Stand">i</button><button class="mt-icon-btn" data-act="settings">⚙</button></div></div>'+
-    installBanner+
+    '<div class="mt-head"><div class="mt-title">Mellis Teller'+subtitle+'</div><div class="mt-head-actions"><button class="mt-info-btn" data-act="info" aria-label="Info zum App-Stand">i</button><button class="mt-icon-btn" data-act="settings">⚙</button></div></div>'+
+    installBanner+milestoneBanner+
     '<div class="mt-datebar"><button data-act="prev">‹</button><div class="mt-date-center"><div class="mt-date-tap"><span class="mt-cal-ico">📅</span><span class="mt-date-main">'+prettyDate(date)+'</span><input type="date" id="dateInput" class="mt-date-input" value="'+date+'"></div>'+(date===todayKey()?'<span class="mt-date-sub">Heute</span>':'<button class="mt-today-btn" data-act="today">↩ Zu Heute</button>')+'</div><button data-act="next">›</button></div>'+
     '<div class="mt-summary"><div class="mt-kcal-row"><div class="mt-kcal-big">'+totals.kcal+'<em> kcal</em></div><div class="mt-goal-txt">'+(goal?'<b>'+goal+'</b> kcal Ziel<br>'+(over?(totals.kcal-goal)+' darüber':(goal-totals.kcal)+' übrig'):'kein Ziel gesetzt<br><span style="color:var(--green)">über ⚙ einstellbar</span>')+'</div></div>'+(goal>0?'<div class="mt-bar'+(over?' over':'')+'"><i style="width:'+goalPct+'%"></i></div>':'')+'<div class="mt-macros" style="margin-top:'+(goal>0?0:16)+'px"><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--terra)"></span>Eiweiß</div><div class="val">'+r1(totals.p)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--amber)"></span>Kohlenh.</div><div class="val">'+r1(totals.c)+'<em> g</em></div></div><div class="mt-macro"><div class="lab"><span class="dot" style="background:var(--blue)"></span>Fett</div><div class="val">'+r1(totals.f)+'<em> g</em></div></div></div></div>'+
-    meals+
+    emptyHtml+meals+
     '<div class="mt-note">Nährwerte sind ca.-Angaben je 100 g. Daten werden auf diesem Gerät gespeichert.</div>'+
   '</div>';
 }
@@ -269,6 +322,7 @@ app.addEventListener("click",function(e){
   else if(act==="settings")openSettings();
   else if(act==="info")openInfo();
   else if(act==="install")doInstall();
+  else if(act==="msdismiss"){var p=pendingMilestone();if(p)dismissMilestone(p.ids);renderApp();}
   else if(act==="installhide"){try{sessionStorage.setItem("mt_installHidden","1");}catch(_){}renderApp();}
   else if(act==="add")openSearch(el.getAttribute("data-meal"));
   else if(act==="edit"){var id=el.getAttribute("data-id");var en=entries.find(function(x){return x.id===id;});if(en)openEdit(en);}
@@ -559,12 +613,20 @@ function openAIReview(items,meal){
 // ---------- Einstellungen ----------
 function openSettings(){
   var s=openSheet("Einstellungen"),body=s.body,close=s.close;
+  function tog(k,title,sub){return '<div class="mt-toggle'+(pfOn(k)?" on":"")+'" data-pf="'+k+'"><div class="sw"><i></i></div><div class="tt">'+title+'<small>'+sub+'</small></div></div>';}
   body.innerHTML='<div class="mt-field"><label>Tagesziel Kalorien (optional)</label><input class="mt-input" id="gi" type="number" inputmode="decimal" value="'+(goal?goal:"")+'" placeholder="z. B. 2000 – oder leer"></div><div class="mt-portion-info">Ohne Eingabe zeigt die App nur die Summen, ohne Vorgabe.</div>'+
+    '<div class="mt-section-lab" style="margin-top:6px">Persönliches</div>'+
+    '<div class="mt-field"><label>Name (für die Begrüßung)</label><input class="mt-input" id="nm" value="'+escAttr(pfName())+'" placeholder="z. B. Melli"></div>'+
+    tog("greet","Persönliche Begrüßung","Tageszeit-Gruß mit deinem Namen")+
+    tog("thought","Gedanke des Tages","Ein kleiner, lieber Satz – wechselt täglich")+
+    tog("streak","Dranbleiben-Serie","Zeigt sanft, wie viele Tage du in Folge dabei bist")+
+    tog("warm","Warme Hinweise & Meilensteine","Liebevolle Texte und kleine Glückwünsche")+
     '<div class="mt-section-lab" style="margin-top:6px">Teller-Foto-Erkennung (KI)</div>'+
     '<div class="mt-field"><label>Google-Gemini-Schlüssel (optional)</label><input class="mt-input" id="ak" type="password" autocomplete="off" value="'+escAttr(aiKey())+'" placeholder="API-Schlüssel einfügen"></div>'+
     '<div class="mt-keyhint">Nötig für „📸 Ganzen Teller fotografieren“. Kostenlos erstellen unter <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Der Schlüssel bleibt nur auf diesem Gerät; das Teller-Foto wird zur Erkennung an Google gesendet.</div>'+
     '<button class="mt-btn mt-btn-green mt-btn-full" id="gs" style="padding:14px;margin-top:14px">Speichern</button>';
-  body.querySelector("#gs").addEventListener("click",function(){var v=body.querySelector("#gi").value.trim();goal=v===""?null:Number(v);LS.set("mt_goal",goal==null?"":String(goal));LS.set("mt_aiKey",body.querySelector("#ak").value.trim());close();renderApp();});
+  body.addEventListener("click",function(e){var t=e.target.closest("[data-pf]");if(!t)return;t.classList.toggle("on");});
+  body.querySelector("#gs").addEventListener("click",function(){var v=body.querySelector("#gi").value.trim();goal=v===""?null:Number(v);LS.set("mt_goal",goal==null?"":String(goal));LS.set("mt_aiKey",body.querySelector("#ak").value.trim());LS.set("mt_name",body.querySelector("#nm").value.trim()||"Melli");body.querySelectorAll("[data-pf]").forEach(function(t){pfSet(t.getAttribute("data-pf"),t.classList.contains("on"));});close();renderApp();});
 }
 
 // ---------- Info & App-Stand ----------
