@@ -162,11 +162,17 @@ body{
 .mt-thought{display:flex;gap:9px;align-items:flex-start;background:var(--green-soft);border-radius:14px;padding:11px 14px;margin-bottom:14px;font-size:13.5px;font-weight:600;color:#3f5a43;line-height:1.45}
 .mt-thought .ic{flex-shrink:0}
 .mt-thought em{font-style:italic;font-weight:600}
+.mt-thought .th-main{display:block}
+.mt-thought .th-team{display:block;margin-top:5px;font-family:'Fraunces',serif;font-style:italic;font-weight:500;font-size:12.5px;color:var(--green-d);opacity:.92}
 .mt-streak{display:inline-flex;align-items:center;gap:6px;background:var(--green-soft);color:var(--green-d);font-weight:800;font-size:12.5px;border-radius:11px;padding:6px 12px;margin-bottom:14px}
 .mt-empty{background:linear-gradient(160deg,#fff,#FFFBF2);border:1.5px dashed var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px;font-size:14px;font-weight:600;color:#5d6b58;line-height:1.5;text-align:center}
 .mt-milestone{display:flex;align-items:center;gap:11px;background:linear-gradient(160deg,#FFF7E6,#FFFBF2);border:1px solid #EAD9A8;border-radius:16px;padding:12px 14px;margin-bottom:16px;font-weight:700;font-size:14px;color:#8a6d1f;line-height:1.4}
 .mt-milestone .mx{margin-left:auto;border:none;background:#fff;width:30px;height:30px;border-radius:9px;font-size:14px;cursor:pointer;color:var(--muted);flex-shrink:0}
 .mt-sign{font-family:'Fraunces',serif;font-style:italic;font-size:13px;font-weight:500;color:var(--green);text-align:center;margin-top:8px;letter-spacing:.01em}
+.mt-hearts{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}
+.mt-hearts span{position:absolute;bottom:38%;font-size:26px;will-change:transform,opacity;opacity:0;animation:mtHeart 1.15s ease-out forwards}
+@keyframes mtHeart{0%{opacity:0;transform:translate(0,0) scale(.5) rotate(0deg)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.15) rotate(var(--rot))}}
+@media (prefers-reduced-motion:reduce){.mt-hearts span{animation-duration:.01ms}}
 </style>
 </head>
 <body>
@@ -177,13 +183,13 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-30.2";
+var APP_VERSION="2026-05-30.3";
 var APP_CHANGES=[
+  "Persönlicher Mut-Satz für dich zuerst – darunter ein lieber Gruß von Team Melli & Marc",
+  "Die Sätze wechseln jetzt bei jedem Öffnen zufällig und passen zur Tageszeit",
+  "Kleiner Herzchen-Regen 💚 nach jedem neuen Eintrag",
   "Kleine Liebes-Signatur „Team Melli & Marc“ ganz unten",
-  "Ein paar besondere „Team Melli & Marc“-Sätze im Gedanken des Tages",
-  "Persönliche Begrüßung mit Namen, je nach Tageszeit",
-  "Gedanke des Tages – ein kleiner, liebevoller Satz, der täglich wechselt",
-  "Dranbleiben-Serie und warme Hinweise an leeren Tagen"
+  "Persönliche Begrüßung mit Namen, je nach Tageszeit"
 ];
 
 // KI-Modell für die Teller-Erkennung (Google Gemini)
@@ -233,26 +239,75 @@ function pfName(){var n=(LS.get("mt_name")||"").trim();return n||"Melli";}
 function pfOn(k){var v=LS.get("mt_pf_"+k);return v===null?true:v==="1";}
 function pfSet(k,b){LS.set("mt_pf_"+k,b?"1":"0");}
 function greeting(){var h=new Date().getHours();var n=esc(pfName());if(h<11)return"Guten Morgen, "+n+" ☀️";if(h<17)return"Schön, dass du da bist, "+n+" 🌿";if(h<22)return"Guten Abend, "+n+" 🌙";return"Gute Nacht, "+n+" 🌙";}
-var THOUGHTS=[
-  "Jeder Eintrag ist ein kleiner Akt der Fürsorge für dich. 💚",
+var THOUGHTS_PERSONAL={
+  morgen:[
+    "Guten Morgen, du Wunderbare – heute gehört dir. ☀️",
+    "Ein neuer Tag, nur für dich. Mach ihn dir schön.",
+    "Steh auf und strahle – die Welt ist schöner mit dir. 🌅",
+    "Frühstück fürs Herz: Du bist genug, genau so wie du bist."
+  ],
+  tag:[
+    "Du machst das großartig – mittendrin im Leben.",
+    "Kleine Pause, große Liebe: Sei gut zu dir.",
+    "Atme durch – du bist auf einem guten Weg. 🌿",
+    "Mitten am Tag und immer noch wundervoll."
+  ],
+  abend:[
+    "Was für ein Tag – und du hast ihn gemeistert. 🌙",
+    "Lass den Abend sanft sein. Du hast genug getan.",
+    "Du darfst stolz auf dich sein, heute Abend.",
+    "Ein guter Moment, dir selbst Danke zu sagen."
+  ],
+  nacht:[
+    "Ruh dich aus, du Liebe – du hast es dir verdient. 🌙",
+    "Die Nacht ist still und du bist genug.",
+    "Schlaf gut und träum schön – morgen ist auch noch da. ✨"
+  ]
+};
+var THOUGHTS_GENERAL=[
+  "Du bist genauso gut genug, wie du bist. 💚",
   "Es geht nicht um perfekt – es geht um dich.",
-  "Schön, dass du dir heute einen Moment nimmst.",
   "Achtsamkeit schlägt Strenge. 🌿",
-  "Ein Tag nach dem anderen – du machst das gut.",
   "Dein Körper darf genährt werden, nicht bestraft.",
   "Kleine Schritte zählen am meisten.",
   "Sei heute freundlich zu dir. 🤍",
   "Essen ist auch Freude – genieß es.",
   "Du bist genau richtig, so wie du bist.",
-  "Dranbleiben ist wertvoller als perfekt sein.",
   "Danke, dass du auf dich achtest. 🌸",
-  "Heute ist ein guter Tag, um gut für dich zu sorgen.",
-  "Ein voller Teller, ein leichtes Herz.",
+  "Du bist wundervoll – vergiss das nie. 💚",
+  "Dranbleiben ist wertvoller als perfekt sein."
+];
+var THOUGHTS_TEAM=[
   "Team Melli & Marc – gemeinsam durch jeden Tag. 💚",
   "Du bist nicht allein – Team Melli & Marc hält zusammen.",
-  "Was auch kommt: Team Melli & Marc schafft das. 💪💚"
+  "Was auch kommt: Team Melli & Marc schafft das. 💪💚",
+  "Marc ist so stolz auf dich. 💚",
+  "An deiner Seite, heute und immer. 🤍",
+  "Team Melli & Marc: das beste Team der Welt. 🌍💚",
+  "Egal was kommt – ihr habt euch. 💑💚"
 ];
-function thoughtOfDay(){var d=todayKey().split("-").map(Number);var n=Math.floor(Date.UTC(d[0],d[1]-1,d[2])/86400000);return THOUGHTS[((n%THOUGHTS.length)+THOUGHTS.length)%THOUGHTS.length];}
+function heartBurst(){
+  if(!pfOn("warm"))return;
+  var layer=document.createElement("div");layer.className="mt-hearts";
+  var icons=["💚","💚","💛","🤍","💚","✨"];var n=9;
+  for(var i=0;i<n;i++){
+    var s=document.createElement("span");
+    s.textContent=icons[Math.floor(Math.random()*icons.length)];
+    var left=42+Math.random()*16;s.style.left=left+"%";
+    var dx=(Math.random()*220-110)+"px";var dy=(-150-Math.random()*170)+"px";
+    s.style.setProperty("--dx",dx);s.style.setProperty("--dy",dy);
+    s.style.setProperty("--rot",(Math.random()*80-40)+"deg");
+    s.style.animationDelay=(Math.random()*120)+"ms";
+    s.style.fontSize=(20+Math.random()*16)+"px";
+    layer.appendChild(s);
+  }
+  document.body.appendChild(layer);
+  setTimeout(function(){layer.remove();},1500);
+}
+function bucketNow(){var h=new Date().getHours();return h<11?"morgen":h<17?"tag":h<22?"abend":"nacht";}
+function rand(a){return a[Math.floor(Math.random()*a.length)];}
+function pickThought(){var pool=THOUGHTS_PERSONAL[bucketNow()].concat(THOUGHTS_GENERAL);return{personal:rand(pool),team:rand(THOUGHTS_TEAM)};}
+var sessionThought=null;
 function dayHasEntries(k){try{var e=LS.get("mt_log_"+k);if(!e)return false;var a=JSON.parse(e);return!!(a&&a.length);}catch(_){return false;}}
 function calcStreak(){var t=todayKey();var anchor=dayHasEntries(t)?t:(dayHasEntries(shiftDay(t,-1))?shiftDay(t,-1):null);if(!anchor)return 0;var n=0,cur=anchor,guard=0;while(dayHasEntries(cur)&&guard<4000){n++;cur=shiftDay(cur,-1);guard++;}return n;}
 function emptyMsg(){var name=esc(pfName());if(date!==todayKey())return"Für diesen Tag ist noch nichts eingetragen.";var h=new Date().getHours();var meal=h<11?"dein Frühstück":h<15?"dein Mittagessen":h<21?"dein Abendessen":"einen Snack";var ic=h<11?"🍳":h<15?"🥗":h<21?"🍽️":"🌙";return ic+" Noch nichts eingetragen – magst du "+meal+" festhalten, "+name+"?";}
@@ -302,7 +357,8 @@ function renderApp(){
   var subtitle=pfOn("greet")?'<small class="greet">'+greeting()+'</small>':'<small>Ernährungstagebuch</small>';
   var ms=pendingMilestone();
   var milestoneBanner=ms?'<div class="mt-milestone"><span>🎉</span><span>'+ms.item.text+'</span><button class="mx" data-act="msdismiss" aria-label="Schließen">✕</button></div>':'';
-  var thoughtHtml=pfOn("thought")?'<div class="mt-thought"><span class="ic">🌿</span><span>'+thoughtOfDay()+'</span></div>':'';
+  if(!sessionThought)sessionThought=pickThought();
+  var thoughtHtml=pfOn("thought")?'<div class="mt-thought"><span class="ic">🌿</span><span><span class="th-main">'+esc(sessionThought.personal)+'</span><span class="th-team">'+esc(sessionThought.team)+'</span></span></div>':'';
   var st=calcStreak();
   var streakHtml=(pfOn("streak")&&st>=1)?'<div class="mt-streak">🌱 '+(st===1?'Heute dabei – schön!':(st+' Tage in Folge dabei'))+'</div>':'';
   var emptyHtml=(pfOn("warm")&&entries.length===0)?'<div class="mt-empty">'+emptyMsg()+'</div>':'';
@@ -380,7 +436,7 @@ function openPortion(food,opts){
   opts=opts||{};var editingId=opts.editingId||null;var grams=opts.grams!=null?opts.grams:(food.serving||100);var mealSel=opts.meal||defaultMeal();var remember=false;
   var s=openSheet(editingId?"Bearbeiten":"Portion"),body=s.body,close=s.close;
   function updateLive(){var live=compute(food,Number(grams)||0);var cells=body.querySelectorAll(".mt-live .v");if(cells.length===4){cells[0].textContent=live.kcal;cells[1].textContent=live.p;cells[2].textContent=live.c;cells[3].textContent=live.f;}}
-  function commit(){var g=Number(grams);if(!g||g<=0)return;var nutr=compute(food,g);var base={kcal:food.kcal,p:food.p,c:food.c,f:food.f};var prev=editingId?entries.find(function(x){return x.id===editingId;}):null;var entry={id:editingId||"e"+Date.now(),name:food.name,brand:food.brand||"",grams:g,meal:mealSel,time:prev?(prev.time||nowTime()):nowTime(),base:base,kcal:nutr.kcal,p:nutr.p,c:nutr.c,f:nutr.f};if(editingId)entries=entries.map(function(e){return e.id===editingId?entry:e;});else entries=entries.concat([entry]);saveEntries();if(remember&&!editingId){var exists=customFoods.some(function(c){return c.name.toLowerCase()===food.name.toLowerCase();});if(!exists){customFoods=[{id:"c"+Date.now(),name:food.name,brand:food.brand||"",kcal:food.kcal,p:food.p,c:food.c,f:food.f,serving:g,builtin:false}].concat(customFoods);saveCustom();}}close();renderApp();}
+  function commit(){var g=Number(grams);if(!g||g<=0)return;var nutr=compute(food,g);var base={kcal:food.kcal,p:food.p,c:food.c,f:food.f};var prev=editingId?entries.find(function(x){return x.id===editingId;}):null;var entry={id:editingId||"e"+Date.now(),name:food.name,brand:food.brand||"",grams:g,meal:mealSel,time:prev?(prev.time||nowTime()):nowTime(),base:base,kcal:nutr.kcal,p:nutr.p,c:nutr.c,f:nutr.f};if(editingId)entries=entries.map(function(e){return e.id===editingId?entry:e;});else entries=entries.concat([entry]);saveEntries();if(remember&&!editingId){var exists=customFoods.some(function(c){return c.name.toLowerCase()===food.name.toLowerCase();});if(!exists){customFoods=[{id:"c"+Date.now(),name:food.name,brand:food.brand||"",kcal:food.kcal,p:food.p,c:food.c,f:food.f,serving:g,builtin:false}].concat(customFoods);saveCustom();}}close();renderApp();if(!editingId)heartBurst();}
   function render(){
     var live=compute(food,Number(grams)||0);
     var chips=(food.serving?'<button class="mt-chip" data-g="'+food.serving+'">1 Portion ('+food.serving+' g)</button>':'')+[10,30,50,100,150,200].map(function(g){return '<button class="mt-chip'+(Number(grams)===g?" on":"")+'" data-g="'+g+'">'+g+' g</button>';}).join("");
@@ -598,7 +654,7 @@ function openAIReview(items,meal){
     if(!chosen.length){close();return;}
     var stamp=Date.now();
     var add=chosen.map(function(rw,i){var g=Number(rw.grams);var nutr=compute(rw.base,g);return{id:"e"+stamp+"_"+i,name:rw.name.trim()||"Lebensmittel",brand:"",grams:g,meal:mealSel,time:nowTime(),base:{kcal:rw.base.kcal,p:rw.base.p,c:rw.base.c,f:rw.base.f},kcal:nutr.kcal,p:nutr.p,c:nutr.c,f:nutr.f};});
-    entries=entries.concat(add);saveEntries();close();renderApp();
+    entries=entries.concat(add);saveEntries();close();renderApp();heartBurst();
   }
   // Eingaben live verarbeiten (ohne Neu-Aufbau, damit der Fokus erhalten bleibt)
   body.addEventListener("input",function(e){
