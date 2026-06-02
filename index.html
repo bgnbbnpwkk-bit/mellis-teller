@@ -10,7 +10,9 @@
 <meta name="apple-mobile-web-app-title" content="Mellis Teller">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.json">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
@@ -22,11 +24,35 @@
   --green:#557A5C; --green-d:#3E5E45; --green-soft:#E5EEE3;
   --terra:#C2724E; --amber:#D6A23E; --blue:#6E8FB2;
 }
+html{height:100%}
 body{
   font-family:'Nunito Sans',sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased;
   background:radial-gradient(1200px 500px at 110% -10%, #EBE3D0 0%, rgba(235,227,208,0) 55%),radial-gradient(900px 500px at -10% 110%, #E7EEE0 0%, rgba(231,238,224,0) 55%),var(--bg);
   min-height:100vh;
+  /* Homescreen-App: kein Verrutschen/Gummiband-Scrollen, kein Doppeltipp-Zoom */
+  position:relative; overscroll-behavior:none; -webkit-text-size-adjust:100%; touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
 }
+/* ----- Login-Screen ----- */
+.mt-gate{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 22px;text-align:center}
+.mt-gate-card{width:100%;max-width:380px;background:linear-gradient(160deg,#fff,#FFFBF2);border:1px solid var(--line);border-radius:26px;padding:30px 24px;box-shadow:0 18px 50px -28px rgba(80,60,30,.5)}
+.mt-gate-logo{font-size:40px;line-height:1;margin-bottom:6px}
+.mt-gate-title{font-family:'Fraunces',serif;font-weight:600;font-size:28px;letter-spacing:-.5px}
+.mt-gate-sub{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.mt-gate-txt{font-size:14px;font-weight:600;color:#5d6b58;line-height:1.55;margin:18px 4px 22px}
+.mt-gbtn{width:100%;border:1px solid var(--line);background:#fff;color:var(--ink);font-family:inherit;font-weight:800;font-size:15px;padding:13px 16px;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:11px}
+.mt-gbtn:hover{border-color:var(--green);background:#fff}
+.mt-gbtn:disabled{opacity:.6;cursor:default}
+.mt-gbtn svg{width:20px;height:20px;flex-shrink:0}
+.mt-gate-msg{font-size:13.5px;font-weight:700;line-height:1.5;border-radius:13px;padding:12px 14px;margin-top:18px}
+.mt-gate-msg.err{background:#FBEFE9;color:#A9512f;border:1px solid #E7C4B5}
+.mt-gate-msg.info{background:var(--green-soft);color:var(--green-d)}
+.mt-gate-spin{margin-top:16px;color:var(--muted);font-weight:700;font-size:13px}
+.mt-gate-foot{font-family:'Fraunces',serif;font-style:italic;font-size:13px;font-weight:500;color:var(--green);margin-top:24px}
+.mt-acct{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:13px;padding:10px 12px;margin:2px 0 12px;font-weight:700;font-size:13px;color:var(--ink)}
+.mt-acct .av{width:30px;height:30px;border-radius:50%;background:var(--green-soft);color:var(--green-d);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;overflow:hidden}
+.mt-acct .av img{width:100%;height:100%;object-fit:cover}
+.mt-acct .em{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mt-wrap{max-width:560px;margin:0 auto;padding:22px 16px 120px}
 .mt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
 .mt-title{font-family:'Fraunces',serif;font-weight:600;font-size:26px;letter-spacing:-.5px;line-height:1}
@@ -183,13 +209,13 @@ body{
 
 // ---------- App-Stand / Version ----------
 // Bei jedem Deploy hochzählen – darüber erkennt die Auto-Aktualisierung neue Stände.
-var APP_VERSION="2026-05-30.3";
+var APP_VERSION="2026-05-30.4";
 var APP_CHANGES=[
-  "Persönlicher Mut-Satz für dich zuerst – darunter ein lieber Gruß von Team Melli & Marc",
-  "Die Sätze wechseln jetzt bei jedem Öffnen zufällig und passen zur Tageszeit",
-  "Kleiner Herzchen-Regen 💚 nach jedem neuen Eintrag",
-  "Kleine Liebes-Signatur „Team Melli & Marc“ ganz unten",
-  "Persönliche Begrüßung mit Namen, je nach Tageszeit"
+  "NEU: Private Anmeldung – die App ist jetzt nur für Team Melli & Marc per Google-Login zugänglich",
+  "Login-Screen mit „Mit Google anmelden“; fremde Konten werden freundlich abgewiesen",
+  "Abmelden-Knopf im Info-Panel (ⓘ), dazu eine kurze Technik-Übersicht",
+  "Deine Einträge bleiben weiterhin nur lokal auf dem Gerät (kein Cloud-Speicher)",
+  "Persönlicher Mut-Satz, Herzchen-Regen 💚 nach jedem Eintrag und Team-Gruß bleiben erhalten"
 ];
 
 // KI-Modell für die Teller-Erkennung (Google Gemini)
@@ -334,6 +360,82 @@ function load(){try{var cf=LS.get("mt_customFoods");if(cf)customFoods=JSON.parse
 function setDate(d){date=d;loadEntries();renderApp();}
 
 var app=document.getElementById("app");
+
+// ---------- Anmeldung (Firebase Auth, nur Login – keine Cloud-Daten) ----------
+// Hinweis: Der apiKey ist ein öffentlicher Firebase-Web-Schlüssel (gehört in den
+// Client, ist kein Geheimnis). Die Datenhaltung bleibt komplett lokal (localStorage).
+var FIREBASE_CONFIG={
+  apiKey:"AIzaSyBZbh9UjXGbTTPIO_jewU41sTKYe4pHvNY",
+  authDomain:"unser-einkaufszettel.firebaseapp.com",
+  databaseURL:"https://unser-einkaufszettel-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"unser-einkaufszettel",
+  storageBucket:"unser-einkaufszettel.firebasestorage.app",
+  messagingSenderId:"1091522338551",
+  appId:"1:1091522338551:web:20bbe0ed444691eebcbdf2"
+};
+var ALLOWED_EMAILS=["marc.saenger1975@gmail.com","melaniechabane1975@gmail.com"];
+var fbAuth=null, authReady=false, currentUser=null, authBusy=false, authMessage=null;
+function isAllowed(user){return !!(user&&user.email&&ALLOWED_EMAILS.indexOf(user.email.toLowerCase())!==-1);}
+function initAuth(){
+  if(typeof firebase==="undefined"||!firebase.auth){authReady=true;authMessage={type:"err",text:"Die Anmeldung konnte nicht geladen werden (keine Verbindung?). Bitte später erneut versuchen."};renderGate();return;}
+  try{firebase.initializeApp(FIREBASE_CONFIG);}catch(e){}
+  fbAuth=firebase.auth();
+  try{fbAuth.useDeviceLanguage();}catch(e){}
+  fbAuth.onAuthStateChanged(function(user){
+    authReady=true;authBusy=false;
+    if(user&&!isAllowed(user)){
+      // Angemeldet, aber nicht freigeschaltet → sofort wieder abmelden.
+      var em=user.email||"dieser Account";
+      fbAuth.signOut().catch(function(){});
+      currentUser=null;
+      authMessage={type:"err",text:"Hallo! Diese App ist privat für Team Melli & Marc. Der Account "+em+" ist hier nicht freigeschaltet. Bitte mit dem richtigen Google-Konto anmelden. 💚"};
+      renderGate();return;
+    }
+    currentUser=user||null;
+    if(currentUser){authMessage=null;bootApp();}
+    else{renderGate();}
+  });
+}
+function signIn(){
+  if(!fbAuth||authBusy)return;authBusy=true;authMessage=null;renderGate();
+  var provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:"select_account"});
+  fbAuth.signInWithPopup(provider).catch(function(err){
+    authBusy=false;
+    var code=(err&&err.code)||"";
+    if(code==="auth/popup-closed-by-user"||code==="auth/cancelled-popup-request"){authMessage=null;}
+    else if(code==="auth/popup-blocked"){authMessage={type:"info",text:"Das Anmeldefenster wurde vom Browser blockiert – wir versuchen es per Weiterleitung …"};renderGate();fbAuth.signInWithRedirect(provider).catch(function(){});return;}
+    else if(code==="auth/unauthorized-domain"){authMessage={type:"err",text:"Diese Adresse ist in Firebase noch nicht als erlaubte Domain hinterlegt. (Authentication → Settings → Authorized domains)"};}
+    else if(code==="auth/operation-not-allowed"){authMessage={type:"err",text:"Google-Anmeldung ist im Firebase-Projekt noch nicht aktiviert. (Authentication → Sign-in method → Google)"};}
+    else{authMessage={type:"err",text:"Anmeldung nicht möglich: "+(err&&err.message?err.message:"unbekannter Fehler")+"."};}
+    renderGate();
+  });
+}
+function signOutUser(){
+  if(!fbAuth)return;
+  fbAuth.signOut().then(function(){authMessage={type:"info",text:"Du bist abgemeldet. Bis bald! 💚"};}).catch(function(){}).then(function(){renderGate();});
+}
+var googleG='<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>';
+function renderGate(){
+  var btnState=authBusy?'<button class="mt-gbtn" disabled>'+googleG+'Anmelden …</button>':'<button class="mt-gbtn" id="goLogin">'+googleG+'Mit Google anmelden</button>';
+  var msg=authMessage?'<div class="mt-gate-msg '+(authMessage.type==="err"?"err":"info")+'">'+esc(authMessage.text)+'</div>':'';
+  var loading=!authReady?'<div class="mt-gate-spin">Einen Moment …</div>':'';
+  app.innerHTML='<div class="mt-gate"><div class="mt-gate-card">'+
+    '<div class="mt-gate-logo">🍽️</div>'+
+    '<div class="mt-gate-title">Mellis Teller</div>'+
+    '<div class="mt-gate-sub">Ernährungstagebuch</div>'+
+    '<div class="mt-gate-txt">Diese App ist privat – bitte melde dich mit deinem Google-Konto an.</div>'+
+    (authReady?btnState:'')+loading+msg+
+    '<div class="mt-gate-foot">Mit Liebe gemacht · Team Melli &amp; Marc 💚</div>'+
+  '</div></div>';
+  var b=app.querySelector("#goLogin");if(b)b.addEventListener("click",signIn);
+}
+var appBooted=false;
+function bootApp(){
+  if(appBooted){renderApp();return;}
+  appBooted=true;
+  load();renderApp();checkForUpdate();
+}
 
 // ---------- PWA-Installation ----------
 var installEvt=null;
@@ -707,8 +809,15 @@ function openInfo(){
           :'<div class="mt-info-txt">Über das Browser-Menü (⋮ bzw. das Teilen-Symbol) „Zum Startbildschirm hinzufügen" bzw. „App installieren" wählen.</div>'))+
     '</div>'+
     '<button class="mt-btn mt-btn-ghost mt-btn-full" id="ckupd" style="margin-top:4px">Jetzt auf Updates prüfen</button>'+
-    '<div id="ckmsg" class="mt-analyze-msg" style="display:none"></div>';
+    '<div id="ckmsg" class="mt-analyze-msg" style="display:none"></div>'+
+    '<div class="mt-info-sec"><div class="mt-info-h">Anmeldung</div>'+
+      (currentUser?'<div class="mt-acct"><span class="av">'+(currentUser.photoURL?'<img src="'+escAttr(currentUser.photoURL)+'" alt="">':esc((currentUser.email||"?").charAt(0).toUpperCase()))+'</span><span class="em">'+esc(currentUser.email||"angemeldet")+'</span></div>':'')+
+      '<button class="mt-del" id="logoutBtn" style="margin-top:0">Abmelden</button>'+
+    '</div>'+
+    '<div class="mt-info-sec"><div class="mt-info-h">Technik</div><div class="mt-info-txt">PWA (HTML/JS, ohne Framework) · Daten lokal im localStorage · Google-Login über Firebase Auth (nur Anmeldung, keine Cloud-Daten) · Teller-Foto-Erkennung über Google Gemini · Barcode via ZXing · Nährwert-Tabelle via Tesseract OCR · Online-Suche über Open Food Facts · Auto-Update ohne Neu-Installieren.</div></div>';
   var infoInstall=body.querySelector("#infoInstall");
+  var logoutBtn=body.querySelector("#logoutBtn");
+  if(logoutBtn)logoutBtn.addEventListener("click",function(){s.close();signOutUser();});
   if(infoInstall)infoInstall.addEventListener("click",function(){s.close();doInstall();});
   var msg=body.querySelector("#ckmsg");
   body.querySelector("#ckupd").addEventListener("click",function(){
@@ -749,7 +858,9 @@ if("serviceWorker" in navigator){
 }
 
 // ---------- Start ----------
-load();renderApp();checkForUpdate();
+// Zugang nur für angemeldete, freigeschaltete Nutzer. bootApp() läuft erst nach
+// erfolgreicher Anmeldung (siehe onAuthStateChanged in initAuth).
+renderGate();initAuth();
 })();
 </script>
 </body>
